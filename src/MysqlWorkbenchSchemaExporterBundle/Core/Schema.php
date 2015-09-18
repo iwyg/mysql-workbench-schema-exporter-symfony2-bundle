@@ -275,17 +275,6 @@ class Schema extends ContainerAware
     {
         $output->writeln(sprintf('Exporting "<info>%s</info>" schema', $this->getName()));
 
-        $outputEntityDir = $this->getOutpuEntitytDir();
-        $this->console->run(new ArrayInput(['command' => 'mkdir', 'path' => $outputEntityDir]));
-
-        $outputModelDir = $this->getOutpuModeltDir();
-        $this->console->run(new ArrayInput(['command' => 'rm', 'path' => $outputModelDir]));
-
-        $configDoctrineDir = $this->getOutpuConfigDir().'/doctrine';
-
-        $configDoctrineXmlDir = $configDoctrineDir.'-xml';
-        $this->console->run(new ArrayInput(['command' => 'rm', 'path' => $configDoctrineXmlDir]));
-
         $bootstrap = new Bootstrap();
 
         // define a formatter and do configuration
@@ -300,17 +289,29 @@ class Schema extends ContainerAware
             $this->getOutpuModeltDir()
         );
 
-        $bootstrap->preCompileModels($formatter, $document);
+        $workDir = $document->getWriter()->getStorage()->getResult();
+        $dirs = $bootstrap->preCompileModels($formatter, $workDir);
 
-        $options = [
-            'command'     => 'doctrine:mapping:convert',
-            'to-type'        => 'xml',
-            'dest-path'      => $configDoctrineXmlDir,
-        ];
-        $this->console->run(new ArrayInput($options), $output);
-        $output->writeln(sprintf('export model meta to <info>%s</info>', $configDoctrineXmlDir));
+        foreach($dirs as $workDir) {
 
-        $bootstrap->postCompileModels($formatter, $document);
+            $destPath = dirname($workDir).'/Resources/config/doctrine-xml';
+            $options = [
+                'command'     => 'doctrine:mapping:convert',
+                'to-type'        => 'xml',
+                'dest-path'      => $destPath,
+                '--filter'=>'SecurityBundle'
+            ];
+
+            if(preg_match('/[^\/]*?Bundle/', $workDir, $m)) {
+
+                $options['--filter'] = $m[0];
+            }
+
+            $this->console->run(new ArrayInput($options), $output);
+            $output->writeln(sprintf('export model meta to <info>%s</info>'."\n----\n", $destPath));
+
+            $bootstrap->postCompileModels($formatter, $workDir.'/Model');
+        }
     }
 
     /**
