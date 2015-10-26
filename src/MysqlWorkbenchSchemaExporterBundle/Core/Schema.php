@@ -299,12 +299,11 @@ class Schema extends ContainerAware
                 'command'     => 'doctrine:mapping:convert',
                 'to-type'        => 'xml',
                 'dest-path'      => $destPath,
-                '--filter'=>'SecurityBundle'
             ];
 
-            if(preg_match('/[^\/]*?Bundle/', $workDir, $m)) {
+            if(preg_match('/([^\/]*?)(\/)([^\/]*?Bundle)/', $workDir, $m)) {
 
-                $options['--filter'] = $m[0];
+                $options['--filter'] = $m[1];
             }
 
             $this->console->run(new ArrayInput($options), $output);
